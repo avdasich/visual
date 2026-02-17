@@ -1,0 +1,5 @@
+/home/avdasich/2y 2sem/hci/visual/build/CMakeFiles/imgui.dir
+/home/avdasich/2y 2sem/hci/visual/build/CMakeFiles/implot.dir
+/home/avdasich/2y 2sem/hci/visual/build/CMakeFiles/main.dir
+/home/avdasich/2y 2sem/hci/visual/build/CMakeFiles/edit_cache.dir
+/home/avdasich/2y 2sem/hci/visual/build/CMakeFiles/rebuild_cache.dir
