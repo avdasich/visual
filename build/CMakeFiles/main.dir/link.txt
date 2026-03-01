@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/main.dir/src/main.cpp.o -o main   -L/opt/homebrew/Cellar/sdl2/2.32.10/lib  -Wl,-rpath,/opt/homebrew/Cellar/sdl2/2.32.10/lib libimgui.a libimplot.a /opt/homebrew/Cellar/sdl2/2.32.10/lib/libSDL2.dylib -framework OpenGL -framework OpenGL libimgui.a /opt/homebrew/lib/libzmq.dylib
