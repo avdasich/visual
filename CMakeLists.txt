@@ -1,46 +1,100 @@
-cmake_minimum_required(VERSION 3.14)
-project(backend_notes)
+cmake_minimum_required(VERSION 3.16)
+project(PhoneMonitor CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(THIRD_PARTY_DIR ${PROJECT_SOURCE_DIR}/third_party)
-set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-
-# SDL2
-find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
-
-# OpenGL
-find_package(OpenGL REQUIRED)
-
-# ZMQ
-find_package(cppzmq REQUIRED)
-
-include_directories(${INCLUDE_DIR})
-
-add_definitions(-DGL_SILENCE_DEPRECATION)
+set(THIRD_PARTY ${CMAKE_SOURCE_DIR}/third_party)
 
 add_library(imgui STATIC
-    ${THIRD_PARTY_DIR}/imgui/imgui.cpp
-    ${THIRD_PARTY_DIR}/imgui/imgui_draw.cpp
-    ${THIRD_PARTY_DIR}/imgui/imgui_demo.cpp
-    ${THIRD_PARTY_DIR}/imgui/imgui_tables.cpp
-    ${THIRD_PARTY_DIR}/imgui/imgui_widgets.cpp
-    ${THIRD_PARTY_DIR}/imgui/backends/imgui_impl_sdl2.cpp
-    ${THIRD_PARTY_DIR}/imgui/backends/imgui_impl_opengl3.cpp
+    ${THIRD_PARTY}/imgui/imgui.cpp
+    ${THIRD_PARTY}/imgui/imgui_draw.cpp
+    ${THIRD_PARTY}/imgui/imgui_tables.cpp
+    ${THIRD_PARTY}/imgui/imgui_widgets.cpp
+    ${THIRD_PARTY}/imgui/backends/imgui_impl_sdl2.cpp
+    ${THIRD_PARTY}/imgui/backends/imgui_impl_opengl3.cpp
 )
-target_include_directories(imgui PUBLIC ${THIRD_PARTY_DIR}/imgui ${THIRD_PARTY_DIR}/imgui/backends)
-target_compile_options(imgui PRIVATE -fPIC)
+target_include_directories(imgui PUBLIC
+    ${THIRD_PARTY}/imgui
+    ${THIRD_PARTY}/imgui/backends
+)
+find_package(SDL2 REQUIRED)
+target_include_directories(imgui PUBLIC ${SDL2_INCLUDE_DIRS})
 
 add_library(implot STATIC
-    ${THIRD_PARTY_DIR}/implot/implot.cpp
-    ${THIRD_PARTY_DIR}/implot/implot_demo.cpp
-    ${THIRD_PARTY_DIR}/implot/implot_items.cpp
+    ${THIRD_PARTY}/implot/implot.cpp
+    ${THIRD_PARTY}/implot/implot_items.cpp
 )
-target_include_directories(implot PUBLIC ${THIRD_PARTY_DIR}/implot)
-target_link_libraries(implot PRIVATE imgui)
-target_compile_options(implot PRIVATE -fPIC)
+target_include_directories(implot PUBLIC
+    ${THIRD_PARTY}/implot
+    ${THIRD_PARTY}/imgui
+)
 
-add_executable(main ${SRC_DIR}/main.cpp)
-target_link_libraries(main PRIVATE imgui implot ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES} cppzmq)
+add_executable(main
+    src/main.cpp
+    src/json_parser.cpp
+    src/gui.cpp
+    src/server.cpp
+)
+
+target_include_directories(main PRIVATE
+    src
+    ${THIRD_PARTY}/imgui
+    ${THIRD_PARTY}/imgui/backends
+    ${THIRD_PARTY}/implot
+)
+
+find_library(ZMQ_LIB
+    NAMES zmq libzmq
+    HINTS
+        /opt/homebrew/lib
+        /usr/local/lib
+        /usr/lib
+)
+if(NOT ZMQ_LIB)
+    message(FATAL_ERROR "libzmq not found. Run: brew install zeromq")
+endif()
+message(STATUS "Found libzmq: ${ZMQ_LIB}")
+
+find_file(ZMQ_HPP zmq.hpp
+    HINTS
+        /opt/homebrew/include
+        /usr/local/include
+        /usr/include
+)
+if(NOT ZMQ_HPP)
+    message(FATAL_ERROR "zmq.hpp not found. Run: brew install cppzmq")
+endif()
+get_filename_component(ZMQ_HPP_DIR ${ZMQ_HPP} DIRECTORY)
+target_include_directories(main PRIVATE ${ZMQ_HPP_DIR})
+
+find_path(ZMQ_INCLUDE_DIR zmq.h
+    HINTS /opt/homebrew/include /usr/local/include /usr/include)
+target_include_directories(main PRIVATE ${ZMQ_INCLUDE_DIR})
+
+find_package(OpenGL REQUIRED)
+target_include_directories(main PRIVATE ${SDL2_INCLUDE_DIRS})
+
+if(APPLE)
+    target_compile_definitions(main PRIVATE GL_SILENCE_DEPRECATION)
+else()
+    find_package(GLEW REQUIRED)
+    target_link_libraries(main PRIVATE GLEW::GLEW)
+endif()
+
+target_link_libraries(main PRIVATE
+    imgui
+    implot
+    ${SDL2_LIBRARIES}
+    OpenGL::GL
+    ${ZMQ_LIB}
+)
+
+if(APPLE)
+    target_link_libraries(main PRIVATE
+        "-framework OpenGL"
+        "-framework Cocoa"
+        "-framework IOKit"
+        "-framework CoreFoundation"
+    )
+endif()

@@ -1,41 +1,34 @@
 
 # AndroidBackend
 
-Desktop backend-приложение на языке C++ для Android-проекта сбора GPS-координат и параметров мобильной сети.
+Desktop backend-приложение на языке C++ для Android-проекта сбора GPS-координат, параметров мобильной сети и проведения drive-test анализа.
 
-Приложение принимает данные со смартфона через ZeroMQ, сохраняет их в `.json` файл и отображает информацию в интерфейсе ImGui.
+Приложение принимает телеметрию со смартфона через ZeroMQ, сохраняет данные в `.json` файл и отображает информацию в интерфейсе ImGui/ImPlot.
 
 ---
 
 # Возможности
 
-- Приём GPS-данных от Android-приложения через ZeroMQ
+- Приём GPS и телеметрии мобильной сети через ZeroMQ
 - Работа backend-сервера в отдельном потоке
-- Графический интерфейс ImGui
-- Отображение:
-  - Latitude
-  - Longitude
-  - Altitude
-  - Accuracy
-  - LTE PCI
-  - TAC
-  - EARFCN
-  - RSRP
-  - RSRQ
-  - RSSI
-  - SINR
-- Сохранение полученных данных в `location.json`
-- Realtime обновление интерфейса
+- Графический интерфейс на ImGui
+- Построение графиков через ImPlot
+- Отображение маршрута движения
+- Отображение LTE / GSM / NR параметров
+- Загрузка и анализ накопленных `.json` файлов
+- Realtime обновление данных
+- Подготовка данных для drive-test
 
 ---
 
 # Используемые технологии
 
-- C++17
+- C++20
 - ZeroMQ
 - SDL2
 - OpenGL
 - ImGui
+- ImPlot
 - CMake
 
 ---
@@ -44,12 +37,18 @@ Desktop backend-приложение на языке C++ для Android-прое
 
 ```text
 src/
- └── main.cpp
+├── gui.cpp
+├── gui.h
+├── json_parser.cpp
+├── json_parser.h
+├── main.cpp
+├── server.cpp
+├── server.h
+└── types.h
 
 third_party/
- └── imgui/
-
-CMakeLists.txt
+├── imgui/
+└── implot/
 ````
 
 ---
@@ -63,6 +62,17 @@ brew install sdl2
 brew install zeromq
 brew install cppzmq
 brew install cmake
+```
+
+---
+
+# Установка библиотек
+
+```bash
+cd third_party
+
+git clone https://github.com/ocornut/imgui.git
+git clone https://github.com/epezent/implot.git
 ```
 
 ---
@@ -82,7 +92,7 @@ make
 # Запуск
 
 ```bash
-./phone_monitor
+./main
 ```
 
 ---
@@ -91,20 +101,31 @@ make
 
 ```json
 {
-    "latitude": 55.0415,
-    "longitude": 82.9346,
-    "altitude": 164.2,
-    "accuracy": 5.0,
-    "time": "2026-02-20 21:10:00",
+    "location": {
+        "latitude": 55.0415,
+        "longitude": 82.9346,
+        "altitude": 164.2,
+        "accuracy": 5.0
+    },
 
-    "pci": 13,
-    "tac": 2451,
-    "earfcn": 1300,
+    "telephony": [
+        {
+            "type": "LTE",
 
-    "rsrp": -92,
-    "rsrq": -11,
-    "rssi": -67,
-    "sinr": 18
+            "CellIdentityLte": {
+                "PCI": 13,
+                "TAC": 2451,
+                "EARFCN": 1300
+            },
+
+            "CellSignalStrengthLte": {
+                "RSRP": -92,
+                "RSRQ": -11,
+                "RSSI": -67,
+                "RSSNR": 18
+            }
+        }
+    ]
 }
 ```
 
@@ -119,33 +140,98 @@ make
 Отвечает за:
 
 * ImGui интерфейс
-* отображение телеметрии
-* realtime обновление данных
+* ImPlot графики
+* отображение маршрута
+* realtime визуализацию телеметрии
+* загрузку и анализ `.json` файлов
+
+GUI работает в `main thread`.
+
+---
 
 ## Server поток
 
 Отвечает за:
 
 * ZeroMQ сервер
-* получение данных
+* получение телеметрии
 * сохранение JSON
 * обновление общей структуры данных
+* накопление истории сигналов
+
+Server поток запускается через:
+
+```cpp
+std::thread
+```
 
 ---
 
-# Взаимодействие потоков
+# Поддерживаемые технологии связи
 
-Потоки используют общую структуру:
+## LTE
 
-```cpp
-struct Location
-```
+Отображаются:
 
-Доступ к структуре синхронизирован через:
+* PCI
+* EARFCN
+* TAC
+* Band
+* RSRP
+* RSRQ
+* RSSI
+* SINR
+* Timing Advance
 
-```cpp
-std::mutex
-```
+---
+
+## GSM
+
+Отображаются:
+
+* CI
+* ARFCN
+* LAC
+* Dbm
+
+---
+
+## NR (5G)
+
+Отображаются:
+
+* PCI
+* SS-RSRP
+* SS-RSRQ
+* SS-SINR
+
+---
+
+# Графики ImPlot
+
+Приложение строит:
+
+* маршрут движения устройства
+* LTE RSRP
+* LTE RSRQ
+* LTE RSSI
+* LTE SINR
+* GSM Dbm
+* NR SS-RSRP
+
+Для LTE поддерживается отображение по PCI.
+
+---
+
+# Работа с JSON файлами
+
+Приложение поддерживает загрузку накопленного `.json` файла.
+
+После загрузки:
+
+* восстанавливается маршрут
+* восстанавливается история сигналов
+* строятся графики drive-test
 
 ---
 
@@ -160,17 +246,25 @@ std::mutex
 
 ---
 
-# Лабораторная работа №10
+# Лабораторная работа №11
 
 Реализовано:
 
-* Android CellInfo
-* LTE параметры сети
-* GPS координаты
-* многопоточность
-* JSON логирование
-* графический интерфейс
-* realtime обновление данных
+* Android background service
+* сбор GPS данных в фоне
+* сбор CellInfo в фоне
+* отправка телеметрии через сокеты
+* ImPlot графики
+* route plotting
+* JSON replay
+* LTE/GSM/NR визуализация
+* подготовка к drive-test
+* рефакторинг проекта на модули:
+
+  * gui
+  * server
+  * json_parser
+  * types
 
 ```
 ```
