@@ -1,6 +1,7 @@
 #include "gui.h"
 #include "types.h"
 #include "json_parser.h"
+#include "database.h"
 
 #include <SDL.h>
 
@@ -29,6 +30,14 @@ void draw_data_panel() {
     {
         lock_guard<mutex> lk(g_mtx);
         d = g_data;
+
+        bool db_ok = (db_conn != nullptr && PQstatus(db_conn) == CONNECTION_OK);
+
+        ImGui::TextColored(
+            db_ok ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1),
+            "DB: %s",
+            db_ok ? "Connected" : "Disconnected"
+        );
     }
 
     ImGui::Text("Location");

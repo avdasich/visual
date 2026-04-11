@@ -1,6 +1,7 @@
 #include "server.h"
 #include "types.h"
 #include "json_parser.h"
+#include "database.h"
 
 #include <zmq.hpp>
 #include <fstream>
@@ -31,6 +32,7 @@ void run_server() {
         }
 
         TelemetryData d = parse_telemetry(raw);
+        insert_to_db(raw, d);
 
         float now = chrono::duration<float>(chrono::steady_clock::now() - t0).count();
         {
@@ -38,7 +40,18 @@ void run_server() {
             g_data = d;
             float dbm   = d.gsm.empty() ? 0.f : (float)d.gsm[0].dbm;
             float nrsrp = d.nr.empty()  ? 0.f : (float)d.nr[0].ss_rsrp;
-            g_hist.push(now, d.lat, d.lon, d.lte, d.gsm, dbm, nrsrp);
+           if (d.lat != 0.0 && d.lon != 0.0) {
+
+            g_hist.push(
+                now,
+                d.lat,
+                d.lon,
+                d.lte,
+                d.gsm,
+                dbm,
+                nrsrp
+            );
+};
         }
 
         sock.send(zmq::buffer("OK"), zmq::send_flags::none);

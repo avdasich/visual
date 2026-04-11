@@ -3,7 +3,7 @@
 
 Desktop backend-приложение на языке C++ для Android-проекта сбора GPS-координат, параметров мобильной сети и проведения drive-test анализа.
 
-Приложение принимает телеметрию со смартфона через ZeroMQ, сохраняет данные в `.json` файл и отображает информацию в интерфейсе ImGui/ImPlot.
+Приложение принимает телеметрию со смартфона через ZeroMQ, сохраняет данные в `.json` файл, записывает информацию в PostgreSQL и отображает данные в интерфейсе ImGui/ImPlot.
 
 ---
 
@@ -17,6 +17,9 @@ Desktop backend-приложение на языке C++ для Android-прое
 - Отображение LTE / GSM / NR параметров
 - Загрузка и анализ накопленных `.json` файлов
 - Realtime обновление данных
+- PostgreSQL интеграция
+- Сохранение телеметрии в базу данных
+- Multi-PCI графики LTE
 - Подготовка данных для drive-test
 
 ---
@@ -25,6 +28,7 @@ Desktop backend-приложение на языке C++ для Android-прое
 
 - C++20
 - ZeroMQ
+- PostgreSQL
 - SDL2
 - OpenGL
 - ImGui
@@ -37,6 +41,8 @@ Desktop backend-приложение на языке C++ для Android-прое
 
 ```text
 src/
+├── database.cpp
+├── database.h
 ├── gui.cpp
 ├── gui.h
 ├── json_parser.cpp
@@ -61,6 +67,7 @@ third_party/
 brew install sdl2
 brew install zeromq
 brew install cppzmq
+brew install postgresql@14
 brew install cmake
 ```
 
@@ -73,6 +80,22 @@ cd third_party
 
 git clone https://github.com/ocornut/imgui.git
 git clone https://github.com/epezent/implot.git
+```
+
+---
+
+# Настройка PostgreSQL
+
+Запуск PostgreSQL:
+
+```bash
+brew services start postgresql@14
+```
+
+Создание базы данных:
+
+```bash
+createdb phone_monitor
 ```
 
 ---
@@ -156,6 +179,7 @@ GUI работает в `main thread`.
 * ZeroMQ сервер
 * получение телеметрии
 * сохранение JSON
+* сохранение данных в PostgreSQL
 * обновление общей структуры данных
 * накопление истории сигналов
 
@@ -164,6 +188,23 @@ Server поток запускается через:
 ```cpp
 std::thread
 ```
+
+---
+
+# PostgreSQL
+
+Приложение автоматически:
+
+* подключается к PostgreSQL
+* создаёт таблицу `telemetry`
+* сохраняет входящую телеметрию
+
+В базу данных сохраняются:
+
+* GPS координаты
+* LTE/GSM/NR параметры
+* traffic statistics
+* raw JSON пакеты
 
 ---
 
@@ -219,7 +260,13 @@ std::thread
 * GSM Dbm
 * NR SS-RSRP
 
-Для LTE поддерживается отображение по PCI.
+Для LTE поддерживается отображение нескольких PCI одновременно.
+
+Каждый PCI:
+
+* отображается отдельной линией
+* имеет собственный цвет
+* автоматически добавляется в легенду ImPlot
 
 ---
 
@@ -246,25 +293,19 @@ std::thread
 
 ---
 
-# Лабораторная работа №11
+# Лабораторная работа №13
 
 Реализовано:
 
-* Android background service
-* сбор GPS данных в фоне
-* сбор CellInfo в фоне
-* отправка телеметрии через сокеты
-* ImPlot графики
-* route plotting
-* JSON replay
+* PostgreSQL интеграция
+* автоматическое создание таблицы telemetry
+* сохранение телеметрии в БД
+* realtime накопление истории сигналов
+* multi-PCI LTE графики
 * LTE/GSM/NR визуализация
-* подготовка к drive-test
-* рефакторинг проекта на модули:
+* JSON logging
+* drive-test подготовка
+* backend на C++ + ZeroMQ
+* ImGui + ImPlot интерфейс
 
-  * gui
-  * server
-  * json_parser
-  * types
-
-```
 ```
