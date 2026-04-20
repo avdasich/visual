@@ -4,6 +4,7 @@
 #include "database.h"
 
 #include <SDL.h>
+#include <cmath>
 
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
@@ -17,9 +18,12 @@
 #include "imgui_impl_sdl2.h"
 #include "implot.h"
 
+#include "osm_map.h"
+
 #include <fstream>
 #include <chrono>
 #include <mutex>
+#include <algorithm>
 
 using namespace std;
 
@@ -109,6 +113,9 @@ void draw_data_panel() {
             while (getline(f, line)) {
                 if (line.empty()) continue;
                 TelemetryData pd = parse_telemetry(line);
+                if (pd.lat == 0.0 && pd.lon == 0.0) { cnt++; continue; }
+                if (pd.lat < -90.0 || pd.lat > 90.0) { cnt++; continue; }
+                if (pd.lon < -180.0 || pd.lon > 180.0) { cnt++; continue; }
                 g_data = pd;
                 float dbm   = pd.gsm.empty() ? 0.f : (float)pd.gsm[0].dbm;
                 float nrsrp = pd.nr.empty()  ? 0.f : (float)pd.nr[0].ss_rsrp;
@@ -237,6 +244,58 @@ ImPlot::PlotScatter(
             }
             ImGui::EndTabItem();
         }
+
+        if (ImGui::BeginTabItem("Map")) {
+        static size_t s_last_fit_count = 0;
+
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0.53f, 0.80f, 0.98f, 1.f));
+
+        if (ImPlot::BeginPlot("##OSMMap", avail)) {
+        ImPlot::SetupAxes("Longitude", "Latitude",
+            ImPlotAxisFlags_None, ImPlotAxisFlags_None);
+
+        if (!hist.lon.empty() && s_last_fit_count != hist.lon.size()) {
+            double lat_min = *min_element(hist.lat.begin(), hist.lat.end());
+            double lat_max = *max_element(hist.lat.begin(), hist.lat.end());
+            double lon_min = *min_element(hist.lon.begin(), hist.lon.end());
+            double lon_max = *max_element(hist.lon.begin(), hist.lon.end());
+            double pad_lat = max(0.002, (lat_max - lat_min) * 0.15);
+            double pad_lon = max(0.002, (lon_max - lon_min) * 0.15);
+            ImPlot::SetupAxisLimits(ImAxis_X1, lon_min - pad_lon, lon_max + pad_lon, ImGuiCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, lat_min - pad_lat, lat_max + pad_lat, ImGuiCond_Always);
+            s_last_fit_count = hist.lon.size();
+        }
+
+        ImPlotRect lims = ImPlot::GetPlotLimits();
+
+        int zoom = osm_auto_zoom(lims.X.Max - lims.X.Min, avail.x);
+        zoom = max(1, min(17, zoom));
+
+        osm_draw(lims.Y.Min, lims.Y.Max, lims.X.Min, lims.X.Max, zoom);
+
+        if (!hist.lon.empty()) {
+            ImPlot::PlotLine("Track", hist.lon.data(), hist.lat.data(), (int)hist.lon.size());
+            ImPlot::PlotScatter("Points", hist.lon.data(), hist.lat.data(), (int)hist.lon.size());
+            double sx = hist.lon.front(), sy = hist.lat.front();
+            ImPlot::PlotScatter("Start", &sx, &sy, 1);
+            double ex = hist.lon.back(), ey = hist.lat.back();
+            ImPlot::PlotScatter("End", &ex, &ey, 1);
+        }
+
+        if (ImPlot::IsPlotHovered()) {
+            ImPlotPoint mp = ImPlot::GetPlotMousePos();
+            ImGui::BeginTooltip();
+            ImGui::Text("Lat %.6f  Lon %.6f  z=%d", mp.y, mp.x, zoom);
+            ImGui::EndTooltip();
+        }
+
+        ImPlot::EndPlot();
+        }
+
+        ImPlot::PopStyleColor();
+        ImGui::EndTabItem();
+    }
 
         ImGui::EndTabBar();
     }

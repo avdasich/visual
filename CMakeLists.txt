@@ -39,20 +39,32 @@ target_include_directories(implot PUBLIC
 
 find_package(PostgreSQL REQUIRED)
 
+find_package(CURL REQUIRED)
+
 add_executable(main
+
     src/main.cpp
+
     src/json_parser.cpp
+    src/curl_func.cpp
     src/gui.cpp
     src/server.cpp
     src/database.cpp
+
+    src/osm_map.cpp
 )
 
 target_include_directories(main PRIVATE
+
     src
+
     ${THIRD_PARTY}/imgui
     ${THIRD_PARTY}/imgui/backends
     ${THIRD_PARTY}/implot
+    ${THIRD_PARTY}/stb
+
     ${PostgreSQL_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
 )
 
 find_library(ZMQ_LIB
@@ -120,17 +132,27 @@ else()
 endif()
 
 target_link_libraries(main PRIVATE
+
     imgui
     implot
+
     ${SDL2_LIBRARIES}
+
     OpenGL::GL
+
     ${ZMQ_LIB}
+
     ${PostgreSQL_LIBRARIES}
+
+    CURL::libcurl
 )
+
+
 
 if(APPLE)
 
     target_link_libraries(main PRIVATE
+
         "-framework OpenGL"
         "-framework Cocoa"
         "-framework IOKit"

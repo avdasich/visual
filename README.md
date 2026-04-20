@@ -14,6 +14,9 @@ Desktop backend-приложение на языке C++ для Android-прое
 - Графический интерфейс на ImGui
 - Построение графиков через ImPlot
 - Отображение маршрута движения
+- Отображение OpenStreetMap-карты под маршрутом
+- Динамическая загрузка нескольких OSM-тайлов под размер окна
+- Кэширование тайлов в `build/<zoom>/<x>/<y>.png`
 - Отображение LTE / GSM / NR параметров
 - Загрузка и анализ накопленных `.json` файлов
 - Realtime обновление данных
@@ -33,6 +36,8 @@ Desktop backend-приложение на языке C++ для Android-прое
 - OpenGL
 - ImGui
 - ImPlot
+- libcurl
+- stb_image
 - CMake
 
 ---
@@ -43,18 +48,23 @@ Desktop backend-приложение на языке C++ для Android-прое
 src/
 ├── database.cpp
 ├── database.h
+├── curl_func.cpp
+├── curl_func.h
 ├── gui.cpp
 ├── gui.h
 ├── json_parser.cpp
 ├── json_parser.h
 ├── main.cpp
+├── osm_map.cpp
+├── osm_map.h
 ├── server.cpp
 ├── server.h
 └── types.h
 
 third_party/
 ├── imgui/
-└── implot/
+├── implot/
+└── stb/
 ````
 
 ---
@@ -68,6 +78,7 @@ brew install sdl2
 brew install zeromq
 brew install cppzmq
 brew install postgresql@14
+brew install curl
 brew install cmake
 ```
 
@@ -80,6 +91,7 @@ cd third_party
 
 git clone https://github.com/ocornut/imgui.git
 git clone https://github.com/epezent/implot.git
+git clone https://github.com/nothings/stb.git
 ```
 
 ---
@@ -165,6 +177,7 @@ make
 * ImGui интерфейс
 * ImPlot графики
 * отображение маршрута
+* отображение OSM-карты
 * realtime визуализацию телеметрии
 * загрузку и анализ `.json` файлов
 
@@ -188,6 +201,32 @@ Server поток запускается через:
 ```cpp
 std::thread
 ```
+
+---
+
+## OpenStreetMap
+
+Модуль `osm_map.cpp/.h` отвечает за:
+
+* пересчёт широты/долготы в номера Web Mercator тайлов;
+* выбор набора тайлов по текущим границам ImPlot-окна и zoom;
+* чтение уже загруженных PNG из кэша;
+* декодирование PNG в RGBA через `stb_image`;
+* загрузку RGBA-пикселей в OpenGL-текстуру;
+* отрисовку тайлов через `ImPlot::PlotImage`.
+
+Модуль `curl_func.cpp/.h` содержит сетевую загрузку PNG через `libcurl`.
+
+Тайлы загружаются асинхронно в пуле worker-потоков. GUI-поток каждый кадр забирает готовые изображения, загружает их в OpenGL и показывает на карте. При запуске из директории `build` кэш сохраняется в структуре:
+
+```text
+build/
+└── <zoom>/
+    └── <x>/
+        └── <y>.png
+```
+
+Если нужный тайл уже есть в кэше, он читается с диска. Если файла нет, тайл скачивается с `tile.openstreetmap.org`.
 
 ---
 
