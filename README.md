@@ -17,6 +17,8 @@ Desktop backend-приложение на языке C++ для Android-прое
 - Отображение OpenStreetMap-карты под маршрутом
 - Динамическая загрузка нескольких OSM-тайлов под размер окна
 - Кэширование тайлов в `build/<zoom>/<x>/<y>.png`
+- Генерация Heat map методом IDW по RSRP / RSRQ / RSSI / Altitude
+- Выбор PCI и EARFCN для построения Heat map
 - Отображение LTE / GSM / NR параметров
 - Загрузка и анализ накопленных `.json` файлов
 - Realtime обновление данных
@@ -38,6 +40,7 @@ Desktop backend-приложение на языке C++ для Android-прое
 - ImPlot
 - libcurl
 - stb_image
+- stb_image_write
 - CMake
 
 ---
@@ -52,6 +55,8 @@ src/
 ├── curl_func.h
 ├── gui.cpp
 ├── gui.h
+├── heatmap.cpp
+├── heatmap.h
 ├── json_parser.cpp
 ├── json_parser.h
 ├── main.cpp
@@ -230,6 +235,27 @@ build/
 
 ---
 
+## Heat map
+
+Модуль `heatmap.cpp/.h` строит тепловую карту методом IDW.
+
+Поддерживаются критерии:
+
+* RSRP
+* RSRQ
+* RSSI
+* Altitude
+
+Heat map строится для выбранного PCI и EARFCN. По умолчанию выбирается PCI с максимальным количеством измерений. В интерфейсе есть список PCI с чекбоксами, выбор EARFCN, выбор критерия и радиус интерполяции 10-40 метров.
+
+Вкладка `Heat map` не отображает точки маршрута и линии соединения, а показывает только OSM-подложку и полупрозрачную тепловую карту. Вычисление запускается асинхронно через `std::async`, результат сохраняется в PNG-файл в директории запуска:
+
+```text
+build/heatmap_<criterion>_pci_<pci>_earfcn_<earfcn>.png
+```
+
+---
+
 # PostgreSQL
 
 Приложение автоматически:
@@ -331,20 +357,4 @@ build/
 * ZMQ сервер работает в отдельном `std::thread`
 
 ---
-
-# Лабораторная работа №13
-
-Реализовано:
-
-* PostgreSQL интеграция
-* автоматическое создание таблицы telemetry
-* сохранение телеметрии в БД
-* realtime накопление истории сигналов
-* multi-PCI LTE графики
-* LTE/GSM/NR визуализация
-* JSON logging
-* drive-test подготовка
-* backend на C++ + ZeroMQ
-* ImGui + ImPlot интерфейс
-
 ```

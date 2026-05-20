@@ -47,6 +47,7 @@ add_executable(main
 
     src/json_parser.cpp
     src/curl_func.cpp
+    src/heatmap.cpp
     src/gui.cpp
     src/server.cpp
     src/database.cpp

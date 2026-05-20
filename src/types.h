@@ -87,9 +87,17 @@ struct PciHistory {
     vector<float> rsrq;
     vector<float> rssi;
     vector<float> sinr;
+    vector<double> lat;
+    vector<double> lon;
+    vector<float> alt;
+    vector<int> earfcn;
 
     void push(
         float time,
+        double _lat,
+        double _lon,
+        float _alt,
+        int _earfcn,
         float _rsrp,
         float _rsrq,
         float _rssi,
@@ -101,8 +109,24 @@ struct PciHistory {
             if ((int)v.size() > MAX_PTS)
                 v.erase(v.begin());
         };
+        auto addd = [](vector<double>& v, double val) {
+            v.push_back(val);
+
+            if ((int)v.size() > MAX_PTS)
+                v.erase(v.begin());
+        };
+        auto addi = [](vector<int>& v, int val) {
+            v.push_back(val);
+
+            if ((int)v.size() > MAX_PTS)
+                v.erase(v.begin());
+        };
 
         add(t,    time);
+        addd(lat, _lat);
+        addd(lon, _lon);
+        add(alt,  _alt);
+        addi(earfcn, _earfcn);
         add(rsrp, _rsrp);
         add(rsrq, _rsrq);
         add(rssi, _rssi);
@@ -145,6 +169,7 @@ struct SignalHistory {
         float time,
         double _lat,
         double _lon,
+        float _alt,
         const vector<CellLte>& lte_cells,
         const vector<CellGsm>& gsm_cells,
         float dbm,
@@ -178,6 +203,10 @@ struct SignalHistory {
 
             lte_by_pci[c.pci].push(
                 time,
+                _lat,
+                _lon,
+                _alt,
+                c.earfcn,
                 (float)c.rsrp,
                 (float)c.rsrq,
                 (float)c.rssi,

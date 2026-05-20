@@ -10,6 +10,28 @@
 
 using namespace std;
 
+static bool valid_geo(double lat, double lon) {
+    return !(lat == 0.0 && lon == 0.0) &&
+           lat >= -90.0 && lat <= 90.0 &&
+           lon >= -180.0 && lon <= 180.0;
+}
+
+static void append_raw_json(const string& raw) {
+    ofstream out("data.json", ios::app);
+    if (out.is_open())
+        out << raw << "\n";
+}
+
+static void update_history(float time, const TelemetryData& d) {
+    float dbm = d.gsm.empty() ? 0.f : (float)d.gsm[0].dbm;
+    float nrsrp = d.nr.empty() ? 0.f : (float)d.nr[0].ss_rsrp;
+
+    lock_guard<mutex> lk(g_mtx);
+    g_data = d;
+    if (valid_geo(d.lat, d.lon))
+        g_hist.push(time, d.lat, d.lon, d.alt, d.lte, d.gsm, dbm, nrsrp);
+}
+
 void run_server() {
     zmq::context_t ctx;
     zmq::socket_t  sock(ctx, zmq::socket_type::rep);
@@ -25,34 +47,11 @@ void run_server() {
         if (!result) continue;
 
         string raw(static_cast<char*>(msg.data()), msg.size());
-
-        {
-            ofstream out("data.json", ios::app);
-            if (out.is_open()) out << raw << "\n";
-        }
-
+        append_raw_json(raw);
         TelemetryData d = parse_telemetry(raw);
         insert_to_db(raw, d);
-
         float now = chrono::duration<float>(chrono::steady_clock::now() - t0).count();
-        {
-            lock_guard<mutex> lk(g_mtx);
-            g_data = d;
-            float dbm   = d.gsm.empty() ? 0.f : (float)d.gsm[0].dbm;
-            float nrsrp = d.nr.empty()  ? 0.f : (float)d.nr[0].ss_rsrp;
-           if (d.lat != 0.0 && d.lon != 0.0) {
-
-            g_hist.push(
-                now,
-                d.lat,
-                d.lon,
-                d.lte,
-                d.gsm,
-                dbm,
-                nrsrp
-            );
-};
-        }
+        update_history(now, d);
 
         sock.send(zmq::buffer("OK"), zmq::send_flags::none);
 
