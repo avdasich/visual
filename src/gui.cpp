@@ -233,9 +233,16 @@ static void draw_heatmap_legend() {
         dl->AddRectFilled(ImVec2(pos.x + w * t0, pos.y), ImVec2(pos.x + w * t1 + 1.f, pos.y + h), col);
     }
     ImGui::InvisibleButton("##heatmap_legend", ImVec2(w, h));
-    ImGui::TextUnformatted("Poor/weak");
-    ImGui::SameLine(w - 68.f);
-    ImGui::TextUnformatted("Excellent");
+
+    const char* labels[] = { "< -110", "-100", "-90", "-80", "> -80 dBm" };
+    for (int i = 0; i < 5; i++) {
+        float t = (float)i / 4.f;
+        float label_w = ImGui::CalcTextSize(labels[i]).x;
+        float x = w * t - label_w * t;
+        if (i > 0)
+            ImGui::SameLine(x);
+        ImGui::TextUnformatted(labels[i]);
+    }
 }
 
 void draw_data_panel() {
