@@ -162,7 +162,7 @@ void TileLoader::worker() {
                 queue_.pop();
             }
         }
-
+  
         if (!tile) continue;
 
         OsmTile::State expected = OsmTile::State::Queued;
@@ -185,7 +185,7 @@ OsmTileCache::~OsmTileCache() {
 }
 
 OsmTile* OsmTileCache::get(int z, int x, int y) {
-    int max_tile = (1 << z);
+    int max_tile  = (1 << z);
     if (x < 0 || x >= max_tile || y < 0 || y >= max_tile)
         return nullptr;
 

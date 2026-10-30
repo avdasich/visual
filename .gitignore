@@ -1,7 +1,14 @@
+
 build/
+cmake-build-*/
+.idea/
+.vscode/
 .DS_Store
 
 *.o
 *.a
 main
 imgui.ini
+
+data.json
+heatmap_*.png
