@@ -283,3 +283,5 @@ void insert_to_db(
 
     PQclear(res);
 }
+
+
