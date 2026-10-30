@@ -89,15 +89,24 @@ brew install cmake
 
 ---
 
-# Установка библиотек
+# Клонирование проекта
+
+Клонировать репозиторий вместе с сабмодулями:
 
 ```bash
-cd third_party
-
-git clone https://github.com/ocornut/imgui.git
-git clone https://github.com/epezent/implot.git
-git clone https://github.com/nothings/stb.git
+git clone --recurse-submodules https://github.com/avdasich/visual.git
+cd visual
 ```
+
+Если проект уже клонирован:
+
+```bash
+git submodule update --init --recursive
+```
+
+ImGui и ImPlot подключены как Git-сабмодули.
+
+Заголовочные файлы stb_image.h и stb_image_write.h уже находятся в third_party/stb. Дополнительно скачивать stb не требуется.
 
 ---
 
