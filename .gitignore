@@ -12,3 +12,10 @@ imgui.ini
 
 data.json
 heatmap_*.png
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
